@@ -60,7 +60,7 @@ library
   other-extensions:    DataKinds, TypeFamilies, TypeOperators, ScopedTypeVariables, ExistentialQuantification, GADTs, PolyKinds, UndecidableInstances
   
   -- Other library packages from which modules are imported.
-  build-depends:       base >=4.8 && <4.9
+  build-depends:       base >=4.8 && <= 4.9
   
   -- Directories containing source files.
   hs-source-dirs:      src
