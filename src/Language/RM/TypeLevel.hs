@@ -89,12 +89,19 @@ type family Execute (m :: Machine) :: Machine where
   Execute (M ip ptr rs is)
     = 'Halted ip (ToList rs)
 
+-- Misc utilities for the data structures
 type family AddressOf (a :: k) :: Nat where
   AddressOf (R p) = p
   AddressOf (L l) = l
 
 type family Jump from to zipper where
-  Jump from to z = Move (AddressOf from) (AddressOf to) z
+  Jump from to z = Jump' (AddressOf from) (AddressOf to) z
+
+type family Jump' from to zipper where
+  Jump' from to z
+    = If (from <=? to)
+           (Right (to - from) z)
+           (Left  (from - to) z)
 
 
 type family Replicate (times :: Nat) (x :: k) :: [k] where

@@ -8,7 +8,6 @@
 
 module Data.Type.Zipper where
 
-import Data.Type.Bool
 import GHC.TypeLits
 
 data Zipper a where
@@ -26,12 +25,6 @@ type family ToList (zipper :: Zipper k) :: [k] where
     = e ': n
   ToList ('Zip (p ': ps) e n)
     = ToList ('Zip ps p (e ': n))
-
-type family Move from to zipper where
-  Move from to z
-    = If (from <=? to)
-           (Right (to - from) z)
-           (Left  (from - to) z)
 
 type family Left (by :: Nat) (zipper :: Zipper k) :: Zipper k where
   Left 0 z = z
