@@ -10,11 +10,16 @@ module Machine where
 import GHC.TypeLits
 
 data Machine where
-  Machine :: Nat -> [Reg] -> Machine
+  M :: Label -> Nat -> [Reg] -> Instructions -> Machine
+
+-- Zipper for (somewhat) more efficient instruction lookup
+data Instructions where
+  I :: [Instr] -> Instr -> [Instr] -> Instructions
 
 -- |Initialise a universal register machine
-type family Init (regc :: Nat) :: Machine where
-  Init n = 'Machine n (InitList n)
+-- (TODO) pre: at least one instruction has to be given
+type family Init (regc :: Nat) (is :: [Instr]) :: Machine where
+  Init n (i ': is) = M (L 0) n (InitList n) (I '[] i is)
 
 data Reg where
   R :: Nat -> Reg
@@ -23,14 +28,16 @@ data Label where
   L :: Nat -> Label
 
 data Instr where
-  Incr :: Reg -> Label -> Instr
+  Inc  :: Reg -> Label -> Instr
   Dec  :: Reg -> Label -> Label -> Instr
   Halt :: Instr
 
+type I    = 'I
+type M    = 'M
 type R    = 'R
 type L    = 'L
 type Dec  = 'Dec
-type Incr = 'Incr
+type Inc  = 'Inc
 type Halt = 'Halt
 
 data Gadget (input :: Reg) (instructions :: [Instr])
@@ -38,6 +45,14 @@ data Gadget (input :: Reg) (instructions :: [Instr])
 
 zero :: Gadget r '[Dec r (L 0) (L 1), Halt]
 zero = Gadget
+
+type family Execute (m :: Machine) :: Machine where
+  Execute (M ip rc rs (I prev (Inc r label) next))
+    = M label rc rs (I prev (Inc r label) next)
+  Execute (M ip rc rs (I prev (Dec r label1 label2) next))
+    = M label1 rc rs (I prev (Dec r label1 label2) next)
+  Execute m
+    = m
 
 -- Utilities for modifying register lists
 data Modify = Increment | Decrement
