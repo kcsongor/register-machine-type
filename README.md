@@ -1,4 +1,4 @@
-# urm-type
+# register-machine-type
 Universal Register Machine implemented at the type-level of Haskell
 
 _This is just a proof of concept!_
