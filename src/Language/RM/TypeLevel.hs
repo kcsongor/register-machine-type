@@ -6,7 +6,7 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Machine (
+module Language.RM.TypeLevel (
     type R
   , type L
   , type Execute
@@ -36,9 +36,6 @@ data Registers where
 type family Init (regc :: Nat) (is :: [Instr]) :: Machine where
   Init n (i ': is)
     = M (L 0) (R 0) n (Rs '[] 0 (InitList (n - 1))) (Is '[] i is)
-
---data Reg where
---  Reg :: Nat -> Reg
 
 data Label where
   L :: Nat -> Label

@@ -4,7 +4,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module Main where
 
-import Machine
+import Language.RM.TypeLevel
 import Data.Proxy
 import GHC.TypeLits
 
