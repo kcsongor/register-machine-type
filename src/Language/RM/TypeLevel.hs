@@ -19,13 +19,11 @@ module Language.RM.TypeLevel (
 
 import GHC.TypeLits
 import Data.Type.Bool
+import Data.Type.Zipper
 
 data Machine where
   M :: Label -> Ptr -> Nat -> Zipper Nat -> Zipper Instr -> Machine
   Halted :: Label -> [Nat] -> Machine
-
-data Zipper a where
-  Zip :: [a] -> a -> [a] -> Zipper a
 
 -- |Initialise a universal register machine
 -- (TODO) pre: at least one instruction has to be given
@@ -95,31 +93,9 @@ type family AddressOf (a :: k) :: Nat where
   AddressOf (R p) = p
   AddressOf (L l) = l
 
--- Zipper utilities
-type family ToList (zipper :: Zipper k) :: [k] where
-  ToList ('Zip '[] e n)
-    = e ': n
-  ToList ('Zip (p ': ps) e n)
-    = ToList (Rs ps p (e ': n))
-
 type family Jump from to zipper where
-  Jump from to z = Jump' (AddressOf from) (AddressOf to) z
+  Jump from to z = Move (AddressOf from) (AddressOf to) z
 
-type family Jump' from to zipper where
-  Jump' from to z
-    = If (from <=? to)
-           (Right (to - from) z)
-           (Left  (from - to) z)
-
-type family Left (by :: Nat) (zipper :: Zipper k) :: Zipper k where
-  Left 0 z = z
-  Left n ('Zip (p ': prevs) cur next)
-    = Left (n - 1) (Is prevs p (cur ': next))
-
-type family Right (by :: Nat) (zipper :: Zipper k) :: Zipper k where
-  Right 0 z = z
-  Right by ('Zip prevs cur (n ': next))
-    = Right (by - 1) (Is (cur ': prevs) n next)
 
 type family Replicate (times :: Nat) (x :: k) :: [k] where
   Replicate 0 x = '[]

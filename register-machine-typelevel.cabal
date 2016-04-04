@@ -51,7 +51,7 @@ cabal-version:       >=1.10
 
 library
   -- Modules exported by the library.
-  exposed-modules:     Language.RM.TypeLevel
+  exposed-modules:     Language.RM.TypeLevel, Data.Type.Zipper
   
   -- Modules included in this library but not exported.
   -- other-modules:       
