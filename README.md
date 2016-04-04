@@ -57,6 +57,6 @@ pow2 = Proxy
 ```
 
 #TODO
-- composable gadgets
+- composable gadgets (that is reusable components, for these to work, their used registers and labels need to be separated)
 - more examples
-- refactor
+- formally prove correctness

@@ -6,27 +6,63 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE UndecidableInstances #-}
 
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  Language.RM.TypeLevel
+-- Copyright   :  (C) 2016 Csongor Kiss
+-- License     :  BSD3
+-- Maintainer  :  Csongor Kiss <kiss.csongor.kiss@gmail.com>
+-- Stability   :  experimental
+-- Portability :  non-portable
+--
+-- Computationally universal register machine implementation at the type-level.
+--
+-- This formulation is identical to the [Lambek
+-- machine](https://en.wikipedia.org/wiki/Counter_machine), with the addition
+-- of an explicit `Halt` instruction, for convenience.
+--
+-- This means (or rather, this is made possible by the fact) that that
+-- Haskell's type system is Turing complete (at least with
+-- TypeFamilies and UndecidableInstances).
+--
+-----------------------------------------------------------------------------
+
 module Language.RM.TypeLevel (
-    type R
-  , type L
-  , type Run
+  -- * Construct and run the machine
+    type Run
+  , Machine (Halted)
+  -- * Instructions
+  , Instr (..)
   , type Inc
   , type Dec
   , type Halt
-  , Machine (..)
+  -- * Operands
+  , Ptr (..)
+  , type R
+  , Label (..)
+  , type L
 ) where
 
 import GHC.TypeLits
 import Data.Type.Bool
 import Data.Type.Zipper
 
+-- |GADT representing the register machine
 data Machine where
   M :: Label -> Ptr -> Zipper Nat -> Zipper Instr -> Machine
   Halted :: Label -> [Nat] -> Machine
 
-type Run is = Execute (Init is)
+-- |Run a list of instructions (`Instr`)
+--
+-- If the program terminates, the result is a `Halted` machine.
+-- (See the [Halting problem](https://en.wikipedia.org/wiki/Halting_problem))
+--
+-- Otherwise the execution hangs the type-checker and eventually consumes
+-- all the available RAM.
+type family Run (is :: [Instr]) :: Machine where
+  Run is = Execute (Init is)
 
--- |Initialise a universal register machine
+-- |Initialise a register machine
 -- (TODO) pre: at least one instruction has to be given
 type family Init (is :: [Instr]) :: Machine where
   Init is
@@ -35,21 +71,56 @@ type family Init (is :: [Instr]) :: Machine where
 data Label where
   L :: Nat -> Label
 
+-- |Pointer to a register.
 data Ptr where
-  P :: Nat -> Ptr
+  Ptr :: Nat -> Ptr
 
+-- |The GADT representing the intructions
+--
+-- The following 3 instructions are supported:
+--
+-- @Inc r l@     - increments register @r@ by 1, and then jumps to label @l@
+-- (that is the instruction located at index @l@).
+--
+-- @Dec r l1 l2@ - if the value of register @r@ is 0, jumps to @l2@, otherwise
+-- decrements @r@ and jumps to @l1@.
+--
+-- @Halt@        - halts the machine.
+--
+-- The `Ptr` arguments are specifying the register.
+--
+-- Some examples
+--
+-- @
+-- Inc (R 1) (L 1)
+-- Dec (R 1) (L 7) (L 12)
+-- Halt
+-- @
+--
 data Instr where
   Inc  :: Ptr -> Label -> Instr
   Dec  :: Ptr -> Label -> Label -> Instr
   Halt :: Instr
 
+-- |Alias to avoid having to tick the promoted `Ptr` constructor
+type R    = 'Ptr
+
+-- |Alias to avoid having to tick the promoted `L` constructor
+type L    = 'L
+
+-- |Alias to avoid having to tick the promoted `Dec` constructor
+type Dec  = 'Dec
+
+-- |Alias to avoid having to tick the promoted `Inc` constructor
+type Inc  = 'Inc
+
+-- |Alias to avoid having to tick the promoted `Halt` constructor
+type Halt = 'Halt
+
+-- Other aliases
 type Is   = 'Zip
 type M    = 'M
-type R    = 'P
-type L    = 'L
-type Dec  = 'Dec
-type Inc  = 'Inc
-type Halt = 'Halt
+
 
 -- TODO: compose (and use :P) gadgets
 data Gadget (input :: Ptr) (instructions :: [Instr])
@@ -58,20 +129,16 @@ data Gadget (input :: Ptr) (instructions :: [Instr])
 zero :: Gadget r '[Dec r (L 0) (L 1), Halt]
 zero = Gadget
 
+-- Execute an initialised machine
 type family Execute (m :: Machine) :: Machine where
   -- When the register pointer `ptr' is the same as the register specified
-  -- in the in the instruction, we set the instrction pointer `ip' to the
+  -- in the in the instruction, we set the instruction pointer `ip' to the
   -- destination label, and move the instruction zipper to that position.
   -- Also, increment the currently focused register
   Execute (M ip ptr rs (Is prev (Inc ptr label) next))
     = Execute (
           M label ptr (Replace rs (Extract rs + 1))
             (Jump ip label (Is prev (Inc ptr label) next)))
-
-  -- When the register pointer `ptr' is not the same, we need to jump to
-  -- the required register before doing anything
-  Execute (M ip ptr rs (Is prev (Inc r label) next))
-    = Execute (M ip r (Jump ptr r rs) (Is prev (Inc r label) next))
 
   Execute (M ip ptr rs (Is prev (Dec ptr label1 label2) next))
     = Execute ( If (Extract rs <=? 0)
@@ -81,11 +148,16 @@ type family Execute (m :: Machine) :: Machine where
                     (Jump ip label1 (Is prev (Dec ptr label1 label2) next)))
             )
 
-  -- When the register pointer `ptr' is not the same, we need to jump to
-  -- the required register before doing anything
+  -- When the register pointer `ptr' is not the same as the focus,
+  -- we need to focus the required register before doing anything
+  Execute (M ip ptr rs (Is prev (Inc r label) next))
+    = Execute (M ip r (Jump ptr r rs) (Is prev (Inc r label) next))
   Execute (M ip ptr rs (Is prev (Dec r label1 label2) next))
     = Execute (M ip r (Jump ptr r rs) (Is prev (Dec r label1 label2) next))
 
+  -- Base case: halt the machine
+  -- This can occur if we've reached a Halt instruction, or if the
+  -- label we tried to access is not defined.
   Execute (M ip ptr rs is)
     = 'Halted ip (ToList rs)
 
