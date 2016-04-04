@@ -11,28 +11,29 @@ import GHC.TypeLits
 -- |Initialises R1 to 5, then raises 2 to the power of the value of R1,
 -- leaving the result (32) in R0. Uses R2 as a scratch register,
 -- thus the machine is initialised with 3 registers
-pow2 :: ('Halted a ((R r) ': rs) ~
+pow2 :: ('Halted a (r ': rs) ~
             Execute (Init 3
               '[
+              -- Instr              | label index
               -- set R1 to 5
-                Inc 1 (L 1)
-              , Inc 1 (L 2)
-              , Inc 1 (L 3)
-              , Inc 1 (L 4)
-              , Inc 1 (L 5)
+                Inc (R 1) (L 1)             -- 0
+              , Inc (R 1) (L 2)             -- 1
+              , Inc (R 1) (L 3)             -- 2
+              , Inc (R 1) (L 4)             -- 3
+              , Inc (R 1) (L 5)             -- 4
               -- set R0 to 1
-              , Inc 0 (L 6)
+              , Inc (R 0) (L 6)             -- 5
               -- R0 = 2^R1
-              , Dec 1 (L 7) (L 12)
+              , Dec (R 1) (L 7) (L 12)      -- 6
               -- R2 = R0
-              , Dec 0 (L 8) (L 9)
-              , Inc 2 (L 7)
+              , Dec (R 0) (L 8) (L 9)       -- 7
+              , Inc (R 2) (L 7)             -- 8
               -- R0 = 2*R2
-              , Dec 2 (L 10) (L 6)
-              , Inc 0 (L 11)
-              , Inc 0 (L 9)
+              , Dec (R 2) (L 10) (L 6)      -- 9
+              , Inc (R 0) (L 11)            -- 10
+              , Inc (R 0) (L 9)             -- 11
 
-              , Halt
+              , Halt                    -- 12
               ])) => Proxy r
 pow2 = Proxy
 
