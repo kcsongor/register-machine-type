@@ -9,8 +9,12 @@ module Machine where
 
 import GHC.TypeLits
 
-data Machine (gprs :: [Reg])
-  = Machine
+data Machine where
+  Machine :: Nat -> [Reg] -> Machine
+
+-- |Initialise a universal register machine
+type family Init (regc :: Nat) :: Machine where
+  Init n = 'Machine n (InitList n)
 
 data Reg where
   R :: Nat -> Reg
@@ -35,6 +39,7 @@ data Gadget (input :: Reg) (instructions :: [Instr])
 zero :: Gadget r '[Dec r (L 0) (L 1), Halt]
 zero = Gadget
 
+-- Utilities for modifying register lists
 data Modify = Increment | Decrement
 
 type family ModifyAt (xs :: [Reg]) (at :: Nat) (m :: Modify) :: [Reg] where
@@ -46,3 +51,7 @@ type family ModifyAt (xs :: [Reg]) (at :: Nat) (m :: Modify) :: [Reg] where
     = R (r - 1) ': rs
   ModifyAt (r ': rs) n m
     = r ': ModifyAt rs (n - 1) m
+
+type family InitList (size :: Nat) :: [Reg] where
+  InitList 0 = '[]
+  InitList n = R 0 ': InitList (n - 1)
