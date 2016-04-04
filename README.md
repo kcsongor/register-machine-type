@@ -9,6 +9,8 @@ and supports the following 3 instructions:
 - `Dec r l1 l2` - if the value of register `r` is 0, jumps to `l2`, otherwise decrements `r` and jumps to `l1`.
 - `Halt`        - halts the machine.
 
+This formulation is identical to the [Lambek machine](https://en.wikipedia.org/wiki/Counter_machine), with the addition of an explicit `Halt` instruction, for convenience. This means that that Haskell's type system is Turing complete (with TypeFamilies and UndecidableInstances).
+
 The machine is initialised with the number of registers required, and a list of instructions to execute, using `Init`. Once initialised, a machine can execute its program with `Execute`.
 
 If the execution of a given program terminates, it will result in the type `Halted ip rs`, where `ip` is the
