@@ -22,14 +22,14 @@ import Data.Type.Bool
 import Data.Type.Zipper
 
 data Machine where
-  M :: Label -> Ptr -> Nat -> Zipper Nat -> Zipper Instr -> Machine
+  M :: Label -> Ptr -> Zipper Nat -> Zipper Instr -> Machine
   Halted :: Label -> [Nat] -> Machine
 
 -- |Initialise a universal register machine
 -- (TODO) pre: at least one instruction has to be given
 type family Init (regc :: Nat) (is :: [Instr]) :: Machine where
-  Init n (i ': is)
-    = M (L 0) (R 0) n (Rs '[] 0 (Replicate (n - 1) 0)) (Is '[] i is)
+  Init n is
+    = M (L 0) (R 0) (FromList (Replicate n 0)) (FromList is)
 
 data Label where
   L :: Nat -> Label
@@ -63,30 +63,30 @@ type family Execute (m :: Machine) :: Machine where
   -- in the in the instruction, we set the instrction pointer `ip' to the
   -- destination label, and move the instruction zipper to that position.
   -- Also, increment the currently focused register
-  Execute (M ip ptr rc (Rs p c n) (Is prev (Inc ptr label) next))
+  Execute (M ip ptr (Rs p c n) (Is prev (Inc ptr label) next))
     = Execute (
-          M label ptr rc (Rs p (c + 1) n)
+          M label ptr (Rs p (c + 1) n)
             (Jump ip label (Is prev (Inc ptr label) next)))
 
   -- |When the register pointer `ptr' is not the same, we need to jump to
   -- the required register before doing anything
-  Execute (M ip ptr rc rs (Is prev (Inc r label) next))
-    = Execute (M ip r rc (Jump ptr r rs) (Is prev (Inc r label) next))
+  Execute (M ip ptr rs (Is prev (Inc r label) next))
+    = Execute (M ip r (Jump ptr r rs) (Is prev (Inc r label) next))
 
-  Execute (M ip ptr rc (Rs p c n) (Is prev (Dec ptr label1 label2) next))
+  Execute (M ip ptr (Rs p c n) (Is prev (Dec ptr label1 label2) next))
     = Execute ( If (c <=? 0)
-                  (M label2 ptr rc (Rs p c n)
+                  (M label2 ptr (Rs p c n)
                     (Jump ip label2 (Is prev (Dec ptr label1 label2) next)))
-                  (M label1 ptr rc (Rs p (c - 1) n)
+                  (M label1 ptr (Rs p (c - 1) n)
                     (Jump ip label1 (Is prev (Dec ptr label1 label2) next)))
             )
 
   -- |When the register pointer `ptr' is not the same, we need to jump to
   -- the required register before doing anything
-  Execute (M ip ptr rc rs (Is prev (Dec r label1 label2) next))
-    = Execute (M ip r rc (Jump ptr r rs) (Is prev (Dec r label1 label2) next))
+  Execute (M ip ptr rs (Is prev (Dec r label1 label2) next))
+    = Execute (M ip r (Jump ptr r rs) (Is prev (Dec r label1 label2) next))
 
-  Execute (M ip ptr rc rs is)
+  Execute (M ip ptr rs is)
     = 'Halted ip (ToList rs)
 
 type family AddressOf (a :: k) :: Nat where
