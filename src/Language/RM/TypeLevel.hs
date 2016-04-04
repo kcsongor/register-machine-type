@@ -44,7 +44,6 @@ data Instr where
   Halt :: Instr
 
 type Is   = 'Zip
-type Rs   = 'Zip
 type M    = 'M
 type R    = 'P
 type L    = 'L
@@ -60,29 +59,29 @@ zero :: Gadget r '[Dec r (L 0) (L 1), Halt]
 zero = Gadget
 
 type family Execute (m :: Machine) :: Machine where
-  -- |When the register pointer `ptr' is the same as the register specified
+  -- When the register pointer `ptr' is the same as the register specified
   -- in the in the instruction, we set the instrction pointer `ip' to the
   -- destination label, and move the instruction zipper to that position.
   -- Also, increment the currently focused register
-  Execute (M ip ptr (Rs p c n) (Is prev (Inc ptr label) next))
+  Execute (M ip ptr rs (Is prev (Inc ptr label) next))
     = Execute (
-          M label ptr (Rs p (c + 1) n)
+          M label ptr (Replace rs (Extract rs + 1))
             (Jump ip label (Is prev (Inc ptr label) next)))
 
-  -- |When the register pointer `ptr' is not the same, we need to jump to
+  -- When the register pointer `ptr' is not the same, we need to jump to
   -- the required register before doing anything
   Execute (M ip ptr rs (Is prev (Inc r label) next))
     = Execute (M ip r (Jump ptr r rs) (Is prev (Inc r label) next))
 
-  Execute (M ip ptr (Rs p c n) (Is prev (Dec ptr label1 label2) next))
-    = Execute ( If (c <=? 0)
-                  (M label2 ptr (Rs p c n)
+  Execute (M ip ptr rs (Is prev (Dec ptr label1 label2) next))
+    = Execute ( If (Extract rs <=? 0)
+                  (M label2 ptr rs
                     (Jump ip label2 (Is prev (Dec ptr label1 label2) next)))
-                  (M label1 ptr (Rs p (c - 1) n)
+                  (M label1 ptr (Replace rs (Extract rs - 1))
                     (Jump ip label1 (Is prev (Dec ptr label1 label2) next)))
             )
 
-  -- |When the register pointer `ptr' is not the same, we need to jump to
+  -- When the register pointer `ptr' is not the same, we need to jump to
   -- the required register before doing anything
   Execute (M ip ptr rs (Is prev (Dec r label1 label2) next))
     = Execute (M ip r (Jump ptr r rs) (Is prev (Dec r label1 label2) next))
@@ -109,14 +108,6 @@ type family Max a b where
 type family AddressOf (a :: k) :: Nat where
   AddressOf (R p) = p
   AddressOf (L l) = l
-
--- |Decrement the focused element of the zipper by 1
-type family ZipDec (z :: Zipper Nat) :: Zipper Nat where
-  ZipDec ('Zip p c n) = 'Zip p (c - 1) n
-
--- |Increment the focused element of the zipper by 1
-type family ZipInc (z :: Zipper Nat) :: Zipper Nat where
-  ZipInc ('Zip p c n) = 'Zip p (c + 1) n
 
 -- |Move the focused element of the zipper from a given global position to
 -- another

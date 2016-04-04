@@ -27,11 +27,12 @@ module Data.Type.Zipper where
 import GHC.TypeLits
 
 -- |Polymorphic list zipper.
+--
+-- Some functions that operate on Zippers are partial.
+-- Instead of having to mess with promoted Maybes and whatnot, this
+-- constructor represent an erroneous operation.
 data Zipper a where
   Zip :: [a] -> a -> [a] -> Zipper a
-  -- |Some functions that operate on Zippers are partial.
-  -- Instead of having to mess with promoted Maybes and whatnot, this
-  -- constructor represent an erroneous operation.
   Invalid :: Zipper a
 
 -- |Construct `Zipper a` from `[a]`.
@@ -43,6 +44,14 @@ type family FromList (xs :: [k]) :: Zipper k where
     = 'Invalid
   FromList (x ': xs)
     = 'Zip '[] x xs
+
+-- |Extract the focused element.
+type family Extract (zipper :: Zipper k) :: k where
+  Extract ('Zip p c n) = c
+
+-- |Replace the focused element with a new one.
+type family Replace (zipper :: Zipper k) (with :: k) :: Zipper k where
+  Replace ('Zip p c n) with = 'Zip p with n
 
 -- |Create a list from the Zipper by appending together the left lift, the
 -- focused element and the right list in this order.
