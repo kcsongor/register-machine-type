@@ -33,7 +33,7 @@ pow2 :: ('Halted a (r ': rs) ~
               , Inc (R 0) (L 11)            -- 10
               , Inc (R 0) (L 9)             -- 11
 
-              , Halt                    -- 12
+              , Halt                        -- 12
               ])) => Proxy r
 pow2 = Proxy
 
