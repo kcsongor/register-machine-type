@@ -9,8 +9,7 @@
 module Language.RM.TypeLevel (
     type R
   , type L
-  , type Execute
-  , type Init
+  , type Run
   , type Inc
   , type Dec
   , type Halt
@@ -25,11 +24,13 @@ data Machine where
   M :: Label -> Ptr -> Zipper Nat -> Zipper Instr -> Machine
   Halted :: Label -> [Nat] -> Machine
 
+type Run is = Execute (Init is)
+
 -- |Initialise a universal register machine
 -- (TODO) pre: at least one instruction has to be given
-type family Init (regc :: Nat) (is :: [Instr]) :: Machine where
-  Init n is
-    = M (L 0) (R 0) (FromList (Replicate n 0)) (FromList is)
+type family Init (is :: [Instr]) :: Machine where
+  Init is
+    = M (L 0) (R 0) (FromList (Replicate (RequiredRegisters is) 0)) (FromList is)
 
 data Label where
   L :: Nat -> Label
@@ -89,11 +90,36 @@ type family Execute (m :: Machine) :: Machine where
   Execute (M ip ptr rs is)
     = 'Halted ip (ToList rs)
 
+-- |Retrieve the number of registers required for running the instructions.
+-- This is needed for initialising the machine
+type family RequiredRegisters (is :: [Instr]) :: Nat where
+  RequiredRegisters '[] = 0
+  RequiredRegisters (Inc (R r) n ': xs)
+    = Max (r + 1) (RequiredRegisters xs)
+  RequiredRegisters (Dec (R r) t f ': xs)
+    = Max (r + 1) (RequiredRegisters xs)
+  RequiredRegisters (x ': xs)
+    = RequiredRegisters xs
+
+-- |The ordinary max function lifted to the type-level
+type family Max a b where
+  Max a b = If (a <=? b) b a
+
 -- Misc utilities for the data structures
 type family AddressOf (a :: k) :: Nat where
   AddressOf (R p) = p
   AddressOf (L l) = l
 
+-- |Decrement the focused element of the zipper by 1
+type family ZipDec (z :: Zipper Nat) :: Zipper Nat where
+  ZipDec ('Zip p c n) = 'Zip p (c - 1) n
+
+-- |Increment the focused element of the zipper by 1
+type family ZipInc (z :: Zipper Nat) :: Zipper Nat where
+  ZipInc ('Zip p c n) = 'Zip p (c + 1) n
+
+-- |Move the focused element of the zipper from a given global position to
+-- another
 type family Jump from to zipper where
   Jump from to z = Jump' (AddressOf from) (AddressOf to) z
 
@@ -103,7 +129,7 @@ type family Jump' from to zipper where
            (Right (to - from) z)
            (Left  (from - to) z)
 
-
+-- |The ordinary replicate function lifted to the type-level
 type family Replicate (times :: Nat) (x :: k) :: [k] where
   Replicate 0 x = '[]
   Replicate n x = x ': Replicate (n - 1) x

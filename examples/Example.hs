@@ -12,7 +12,7 @@ import GHC.TypeLits
 -- leaving the result (32) in R0. Uses R2 as a scratch register,
 -- thus the machine is initialised with 3 registers
 pow2 :: ('Halted a (r ': rs) ~
-            Execute (Init 3
+            Run
               '[
               -- Instr              | label index
               -- set R1 to 5
@@ -34,7 +34,7 @@ pow2 :: ('Halted a (r ': rs) ~
               , Inc (R 0) (L 9)             -- 11
 
               , Halt                        -- 12
-              ])) => Proxy r
+              ]) => Proxy r
 pow2 = Proxy
 
 result :: Integer
