@@ -21,21 +21,17 @@ import GHC.TypeLits
 import Data.Type.Bool
 
 data Machine where
-  M :: Label -> Ptr -> Nat -> Registers -> Instructions -> Machine
+  M :: Label -> Ptr -> Nat -> Zipper Nat -> Zipper Instr -> Machine
   Halted :: Label -> [Nat] -> Machine
 
--- Zipper for (somewhat) more efficient instruction lookup
-data Instructions where
-  Is :: [Instr] -> Instr -> [Instr] -> Instructions
-
-data Registers where
-  Rs :: [Nat] -> Nat -> [Nat] -> Registers
+data Zipper a where
+  Zip :: [a] -> a -> [a] -> Zipper a
 
 -- |Initialise a universal register machine
 -- (TODO) pre: at least one instruction has to be given
 type family Init (regc :: Nat) (is :: [Instr]) :: Machine where
   Init n (i ': is)
-    = M (L 0) (R 0) n (Rs '[] 0 (InitList (n - 1))) (Is '[] i is)
+    = M (L 0) (R 0) n (Rs '[] 0 (Replicate (n - 1) 0)) (Is '[] i is)
 
 data Label where
   L :: Nat -> Label
@@ -48,8 +44,8 @@ data Instr where
   Dec  :: Ptr -> Label -> Label -> Instr
   Halt :: Instr
 
-type Is   = 'Is
-type Rs   = 'Rs
+type Is   = 'Zip
+type Rs   = 'Zip
 type M    = 'M
 type R    = 'P
 type L    = 'L
@@ -100,10 +96,10 @@ type family AddressOf (a :: k) :: Nat where
   AddressOf (L l) = l
 
 -- Zipper utilities
-type family ToList zipper where
-  ToList (Rs '[] e n)
+type family ToList (zipper :: Zipper k) :: [k] where
+  ToList ('Zip '[] e n)
     = e ': n
-  ToList (Rs (p ': ps) e n)
+  ToList ('Zip (p ': ps) e n)
     = ToList (Rs ps p (e ': n))
 
 type family Jump from to zipper where
@@ -115,20 +111,16 @@ type family Jump' from to zipper where
            (Right (to - from) z)
            (Left  (from - to) z)
 
-type family Left (by :: Nat) (zipper :: k) :: k where
+type family Left (by :: Nat) (zipper :: Zipper k) :: Zipper k where
   Left 0 z = z
-  Left n (Is (p ': prevs) cur next)
+  Left n ('Zip (p ': prevs) cur next)
     = Left (n - 1) (Is prevs p (cur ': next))
-  Left n (Rs (p ': prevs) cur next)
-    = Left (n - 1) (Rs prevs p (cur ': next))
 
-type family Right (by :: Nat) (zipper :: k) :: k where
+type family Right (by :: Nat) (zipper :: Zipper k) :: Zipper k where
   Right 0 z = z
-  Right by (Is prevs cur (n ': next))
+  Right by ('Zip prevs cur (n ': next))
     = Right (by - 1) (Is (cur ': prevs) n next)
-  Right by (Rs prevs cur (n ': next))
-    = Right (by - 1) (Rs (cur ': prevs) n next)
 
-type family InitList (size :: Nat) :: [Nat] where
-  InitList 0 = '[]
-  InitList n = 0 ': InitList (n - 1)
+type family Replicate (times :: Nat) (x :: k) :: [k] where
+  Replicate 0 x = '[]
+  Replicate n x = x ': Replicate (n - 1) x
