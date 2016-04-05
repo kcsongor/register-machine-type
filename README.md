@@ -3,7 +3,7 @@ Universal Register Machine implemented at the type-level of Haskell
 
 _This is just a proof of concept!_
 
-Available on [Hackage](https://hackage.haskell.org/package/register-machine-typelevel#readme)
+Available on [Hackage](https://hackage.haskell.org/package/register-machine-typelevel)
 
 The machine consists of a set of registers, a contiguous instruction pool (starting at index 0)
 and supports the following 3 instructions:
